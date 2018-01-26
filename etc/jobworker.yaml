@@ -1,0 +1,25 @@
+version: v.2.3.2.1
+pidfile: ./jobworker.pid
+retrystartup: true
+cluster:
+    datacenter: dev #gdev|gqc|e3|e4|e11|wh7|cross-dc
+    hosts: 10.16.75.23:8481,10.16.75.25:8481,10.16.75.26:8481
+    root: /cloudtask_dev
+    device:
+    runtime: myCluster
+    pulse: 8s
+    threshold: 1
+api:
+    hosts: [":8600"]
+    enablecors: true
+cache:
+    maxjobs: 255
+    savedirectory: ./cache
+    autoclean: true
+    cleaninterval: 30m
+    pullrecovery: 300s
+logger:
+    logfile: ./logs/jobworker.log
+    loglevel: info
+    logsize: 20971520
+...
