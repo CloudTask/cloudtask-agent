@@ -1,6 +1,7 @@
 package notify
 
 import "github.com/cloudtask/libtools/gounits/logger"
+import "github.com/cloudtask/libtools/gounits/rand"
 import "github.com/cloudtask/common/models"
 
 import (
@@ -9,9 +10,10 @@ import (
 )
 
 //SendMail is exported
-func (sender *NotifySender) SendMail(msgid string, jobid string, name string, notifysetting *models.NotifySetting,
+func (sender *NotifySender) SendMail(jobid string, name string, notifysetting *models.NotifySetting,
 	workdir string, state int, stdout string, errout string, execerr string, execat time.Time, exectimes float64) {
 
+	msgid := rand.UUID(true)
 	logger.INFO("[#notify#] mail %s job %s, state %d execat %s exectimes %.0f", msgid[:8], jobid, state, execat.Format("2006-01-02 15:04:05"), exectimes)
 	if notifysetting == nil {
 		return

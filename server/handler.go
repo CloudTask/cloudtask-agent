@@ -3,7 +3,6 @@ package server
 import "github.com/cloudtask/cloudtask-agent/cache"
 import "github.com/cloudtask/cloudtask-agent/driver"
 import "github.com/cloudtask/libtools/gounits/logger"
-import "github.com/cloudtask/libtools/gounits/rand"
 import "github.com/cloudtask/libtools/gzkwrapper"
 import "github.com/cloudtask/common/models"
 
@@ -66,35 +65,31 @@ func (server *NodeServer) OnJobCacheChangedHandlerFunc(event cache.CacheEvent, j
 func (server *NodeServer) OnJobCacheExceptionHandlerFunc(event cache.CacheEvent, workdir string, jobget *cache.JobGet, jobgeterror *cache.JobGetError) {
 
 	logger.ERROR("[#server#] jobcache exception, job %s version %d event %s code %d %s", jobget.JobId, jobget.JobData.Version, event, jobgeterror.Code, jobgeterror.Error.Error())
-	msgid := rand.UUID(true)
 	execat := time.Now()
-	server.Notify.SendExecuteMessage(msgid, jobget.JobId, models.STATE_FAILED, jobgeterror.String(), execat, time.Time{})
-	server.Notify.SendLog(msgid, jobget.JobId, "", workdir, models.STATE_FAILED, "", "", jobgeterror.String(), execat, 0.000000)
+	server.Notify.SendExecuteMessage(jobget.JobId, models.STATE_FAILED, jobgeterror.String(), execat, time.Time{})
+	server.Notify.SendLog(jobget.JobId, "", workdir, models.STATE_FAILED, "", "", jobgeterror.String(), execat, 0.000000)
 }
 
 func (server *NodeServer) OnDriverExecuteHandlerFunc(state int, context *driver.DriverContext) {
 
 	logger.INFO("[#server#] driver execute, job %s state %s", context.Job.JobId, models.GetStateString(state))
-	msgid := rand.UUID(true)
-	server.Notify.SendExecuteMessage(msgid, context.Job.JobId, state, context.ExecErr, context.ExecAt, context.NextAt)
+	server.Notify.SendExecuteMessage(context.Job.JobId, state, context.ExecErr, context.ExecAt, context.NextAt)
 	//当状态为: STATE_STARTED, 忽略日志与发邮件.
 	//当状态为: STATE_STOPED | STATE_FAILED, 记录日志，处理邮件通知.
 	if state != models.STATE_STARTED {
-		server.Notify.SendLog(msgid, context.Job.JobId, context.Job.Cmd, context.Job.WorkDir, state, context.StdOut, context.ErrOut, context.ExecErr, context.ExecAt, context.ExecTimes)
-		server.Notify.SendMail(msgid, context.Job.JobId, context.Job.Name, context.Job.NotifySetting, context.Job.WorkDir, state, context.StdOut, context.ErrOut, context.ExecErr, context.ExecAt, context.ExecTimes)
+		server.Notify.SendLog(context.Job.JobId, context.Job.Cmd, context.Job.WorkDir, state, context.StdOut, context.ErrOut, context.ExecErr, context.ExecAt, context.ExecTimes)
+		server.Notify.SendMail(context.Job.JobId, context.Job.Name, context.Job.NotifySetting, context.Job.WorkDir, state, context.StdOut, context.ErrOut, context.ExecErr, context.ExecAt, context.ExecTimes)
 	}
 }
 
 func (server *NodeServer) OnDriverSelectHandlerFunc(context *driver.DriverContext) {
 
 	logger.INFO("[#server#] driver select, job %s", context.Job.JobId)
-	msgid := rand.UUID(true)
-	server.Notify.SendSelectMessage(msgid, context.Job.JobId, context.NextAt)
+	server.Notify.SendSelectMessage(context.Job.JobId, context.NextAt)
 }
 
 func (server *NodeServer) OnDriverStopedHandlerFunc(state int, context *driver.DriverContext) {
 
 	logger.INFO("[#server#] driver stoped, job %s", context.Job.JobId)
-	msgid := rand.UUID(true)
-	server.Notify.SendExecuteMessage(msgid, context.Job.JobId, state, context.ExecErr, context.ExecAt, context.NextAt)
+	server.Notify.SendExecuteMessage(context.Job.JobId, state, context.ExecErr, context.ExecAt, context.NextAt)
 }

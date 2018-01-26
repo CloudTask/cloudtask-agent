@@ -1,6 +1,7 @@
 package notify
 
 import "github.com/cloudtask/libtools/gounits/logger"
+import "github.com/cloudtask/libtools/gounits/rand"
 import "github.com/cloudtask/common/models"
 
 import (
@@ -8,9 +9,10 @@ import (
 )
 
 //SendLog is exported
-func (sender *NotifySender) SendLog(msgid string, jobid string, command string, workdir string, state int,
+func (sender *NotifySender) SendLog(jobid string, command string, workdir string, state int,
 	stdout string, errout string, execerr string, execat time.Time, exectimes float64) {
 
+	msgid := rand.UUID(true)
 	logger.INFO("[#notify#] log %s job %s, state %d execat %s exectimes %.0f", msgid[:8], jobid, state, execat.Format("2006-01-02 15:04:05"), exectimes)
 	jobLog := &models.JobLog{
 		JobId:     jobid,

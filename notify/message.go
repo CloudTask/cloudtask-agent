@@ -1,6 +1,7 @@
 package notify
 
 import "github.com/cloudtask/libtools/gounits/logger"
+import "github.com/cloudtask/libtools/gounits/rand"
 import "github.com/cloudtask/common/models"
 
 import (
@@ -8,8 +9,9 @@ import (
 )
 
 //SendExecuteMessage is exported
-func (sender *NotifySender) SendExecuteMessage(msgid string, jobid string, state int, execerr string, execat time.Time, nextat time.Time) {
+func (sender *NotifySender) SendExecuteMessage(jobid string, state int, execerr string, execat time.Time, nextat time.Time) {
 
+	msgid := rand.UUID(true)
 	logger.INFO("[#notify#] message %s job %s, execute state %d execat %s nextat %s", msgid[:8], jobid, state, execat.Format("2006-01-02 15:04:05"), nextat.Format("2006-01-02 15:04:05"))
 	jobExecute := &models.JobExecute{
 		MsgHeader: models.MsgHeader{
@@ -36,8 +38,9 @@ func (sender *NotifySender) SendExecuteMessage(msgid string, jobid string, state
 }
 
 //SendSelectMessage is exported
-func (sender *NotifySender) SendSelectMessage(msgid string, jobid string, nextat time.Time) {
+func (sender *NotifySender) SendSelectMessage(jobid string, nextat time.Time) {
 
+	msgid := rand.UUID(true)
 	logger.INFO("[#notify#] message %s job %s, select nextat %s", msgid[:8], jobid, nextat.Format("2006-01-02 15:04:05"))
 	jobSelect := &models.JobSelect{
 		MsgHeader: models.MsgHeader{
