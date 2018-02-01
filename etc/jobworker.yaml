@@ -1,9 +1,9 @@
 version: v.2.3.2.1
 pidfile: ./jobworker.pid
 retrystartup: true
+centerapi: http://127.0.0.1:8985/cloudtask/v2
 cluster:
-    datacenter: dev #gdev|gqc|e3|e4|e11|wh7|cross-dc
-    hosts: 10.16.75.23:8481,10.16.75.25:8481,10.16.75.26:8481
+    hosts: 192.168.2.80:2181,192.168.2.81:2181,192.168.2.82:2181
     root: /cloudtask_dev
     device:
     runtime: myCluster
@@ -18,6 +18,7 @@ cache:
     autoclean: true
     cleaninterval: 30m
     pullrecovery: 300s
+    filesrverapi: http://files.domain.com/cloudtask_v2
 logger:
     logfile: ./logs/jobworker.log
     loglevel: info

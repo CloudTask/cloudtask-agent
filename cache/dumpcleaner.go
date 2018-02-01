@@ -22,16 +22,16 @@ type DumpCleaner struct {
 }
 
 //NewDumpCleaner is exported
-func NewDumpCleaner(args *CacheArgs) *DumpCleaner {
+func NewDumpCleaner(configs *CacheConfigs) *DumpCleaner {
 
-	duration, err := time.ParseDuration(args.CleanInterval)
+	duration, err := time.ParseDuration(configs.CleanInterval)
 	if err != nil {
 		duration, _ = time.ParseDuration("30m")
 	}
 
 	return &DumpCleaner{
-		Root:     args.SaveDirectory,
-		Enabled:  args.AutoClean,
+		Root:     configs.SaveDirectory,
+		Enabled:  configs.AutoClean,
 		Duration: duration,
 		stopCh:   nil,
 	}

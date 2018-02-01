@@ -26,6 +26,11 @@ func (conf *Configuration) parseEnv() error {
 		conf.RetryStartup = value
 	}
 
+	centerAPI := os.Getenv("CLOUDTASK_CENTERAPI")
+	if centerAPI != "" {
+		conf.CenterAPI = centerAPI
+	}
+
 	var err error
 	//parse cluster env
 	if err = parseClusterEnv(conf); err != nil {
@@ -50,11 +55,6 @@ func (conf *Configuration) parseEnv() error {
 }
 
 func parseClusterEnv(conf *Configuration) error {
-
-	clusterDataCenter := os.Getenv("CLOUDTASK_CLUSTER_DATACENTER")
-	if clusterDataCenter != "" {
-		conf.Cluster.DataCenter = clusterDataCenter
-	}
 
 	if clusterHosts := os.Getenv("CLOUDTASK_CLUSTER_HOSTS"); clusterHosts != "" {
 		conf.Cluster.Hosts = clusterHosts
@@ -151,6 +151,10 @@ func parseCacheEnv(conf *Configuration) error {
 			return fmt.Errorf("CLOUDTASK_CACHE_PULLRECOVERY invalid, %s", err.Error())
 		}
 		conf.Cache.PullRecovery = pullRecovery
+	}
+
+	if fileServerAPI := os.Getenv("CLOUDTASK_CACHE_FILESERVERAPI"); fileServerAPI != "" {
+		conf.Cache.FileSrverAPI = fileServerAPI
 	}
 	return nil
 }

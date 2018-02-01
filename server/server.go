@@ -1,6 +1,5 @@
 package server
 
-import "github.com/cloudtask/cloudtask-agent/api"
 import "github.com/cloudtask/cloudtask-agent/cache"
 import "github.com/cloudtask/cloudtask-agent/driver"
 import "github.com/cloudtask/cloudtask-agent/etc"
@@ -22,44 +21,42 @@ const (
 
 //NodeServer is exported
 type NodeServer struct {
+	Key       string
+	Runtime   string
+	AllocPath string
+	Data      *gzkwrapper.NodeData
+	Worker    *gzkwrapper.Worker
+	Cache     *cache.Cache
+	Driver    *driver.Driver
+	Notify    *notify.NotifySender
+	stopCh    chan struct{}
 	gzkwrapper.INodeNotifyHandler
 	cache.ICacheHandler
 	driver.IDriverHandler
-	Key        string
-	Runtime    string
-	ConfigPath string
-	AllocPath  string
-	Data       *gzkwrapper.NodeData
-	Worker     *gzkwrapper.Worker
-	Cache      *cache.Cache
-	Driver     *driver.Driver
-	Notify     *notify.NotifySender
-	stopCh     chan struct{}
 }
 
 //NewNodeServer is exported
 func NewNodeServer(key string) (*NodeServer, error) {
 
-	clusterArgs := etc.ClusterArgs()
+	clusterConfigs := etc.ClusterConfigs()
 	server := &NodeServer{
-		Key:        key,
-		Runtime:    clusterArgs.Location,
-		ConfigPath: clusterArgs.Root + "/ServerConfigs",
-		AllocPath:  clusterArgs.Root + "/JOBS-" + clusterArgs.Location,
-		stopCh:     make(chan struct{}),
+		Key:       key,
+		Runtime:   clusterConfigs.Location,
+		AllocPath: clusterConfigs.Root + "/JOBS-" + clusterConfigs.Location,
+		stopCh:    make(chan struct{}),
 	}
 
-	worker, err := gzkwrapper.NewWorker(key, clusterArgs, server)
+	worker, err := gzkwrapper.NewWorker(key, clusterConfigs, server)
 	if err != nil {
 		return nil, err
 	}
 
 	server.Worker = worker
 	server.Data = worker.Data
-	cacheArgs := etc.CacheArgs()
-	server.Cache = cache.NewCache(cacheArgs, etc.ServerConfig, server)
-	server.Driver = driver.NewDirver(cacheArgs.SaveDirectory, server)
-	server.Notify = notify.NewNotifySender(clusterArgs.Location, key, worker.Data.IpAddr, etc.ServerConfig)
+	cacheConfigs := etc.CacheConfigs()
+	server.Cache = cache.NewCache(etc.CenterAPI(), cacheConfigs, server)
+	server.Driver = driver.NewDirver(cacheConfigs.SaveDirectory, server)
+	server.Notify = notify.NewNotifySender(etc.CenterAPI(), clusterConfigs.Location, key, worker.Data.IpAddr)
 	return server, nil
 }
 
@@ -84,11 +81,6 @@ func (server *NodeServer) Startup() error {
 		return err
 	}
 
-	if err = server.initServerConfig(); err != nil {
-		logger.ERROR("[#server#] init server config error, %s", err)
-		return err
-	}
-
 	if err = server.openCache(); err != nil {
 		logger.ERROR("[#server#] server open cache error, %s", err)
 		return err
@@ -100,7 +92,6 @@ func (server *NodeServer) Startup() error {
 func (server *NodeServer) Stop() error {
 
 	close(server.stopCh)
-	server.closeServerConfig()
 	server.Driver.Clear()
 	server.closeCache()
 	if err := server.nodeUnRegister(); err != nil {
@@ -118,7 +109,7 @@ func (server *NodeServer) nodeRegister() error {
 	}
 
 	attach := models.AttachEncode(&models.AttachData{
-		JobMaxCount: etc.CacheArgs().MaxJobs,
+		JobMaxCount: etc.CacheConfigs().MaxJobs,
 	})
 	return server.Worker.Signin(attach)
 }
@@ -130,44 +121,6 @@ func (server *NodeServer) nodeUnRegister() error {
 		return err
 	}
 	return server.Worker.Close()
-}
-
-//initServerConfig is exported
-//initialize server congfigs and watching zk config path.
-func (server *NodeServer) initServerConfig() error {
-
-	//watch server config path.
-	if err := server.Worker.WatchOpen(server.ConfigPath, server.OnSeverConfigsWatchHandlerFunc); err != nil {
-		return err
-	}
-
-	//read config data.
-	data, err := server.Worker.Get(server.ConfigPath)
-	if err != nil {
-		return err
-	}
-	//save data to etc serverConfig.
-	return server.RefreshServerConfig(data)
-}
-
-//closeServerConfig is exported
-func (server *NodeServer) closeServerConfig() {
-
-	server.Worker.WatchClose(server.ConfigPath)
-}
-
-//RefreshServerConfig is exported
-//save serverConfig, re-set to references objects.
-func (server *NodeServer) RefreshServerConfig(data []byte) error {
-
-	if err := etc.SaveServerConfig(data); err != nil {
-		return err
-	}
-
-	api.RegisterStore("ServerConfig", etc.ServerConfig)
-	server.Cache.SetServerConfig(etc.ServerConfig)
-	server.Notify.SetServerConfig(etc.ServerConfig)
-	return nil
 }
 
 //openCache is exported

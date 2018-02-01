@@ -10,8 +10,6 @@ import "github.com/cloudtask/common/models"
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -105,22 +103,23 @@ Job信息获取器
 3、下载Job文件包成功负责解压生成目录结构，写入job.json信息文件
 */
 type JobGetter struct {
-	sync.RWMutex                      //互斥锁对象
-	Root         string               //缓存根目录
-	Recovery     time.Duration        //恢复拉取间隔
-	serverConfig *models.ServerConfig //服务器配置信息
-	exec         bool                 //是否在执行恢复拉取
-	quit         chan bool            //退出下载
-	gets         map[string]*JobGet   //下载任务集合
-	handler      IJobGetterHandler    //回调句柄
-	client       *httpx.HttpClient    //网络调用客户端
+	sync.RWMutex                     //互斥锁对象
+	Root          string             //缓存根目录
+	Recovery      time.Duration      //恢复拉取间隔
+	FileServerAPI string             //文件服务器API地址
+	CenterAPI     string             //中心服务器API地址
+	exec          bool               //是否在执行恢复拉取
+	quit          chan bool          //退出下载
+	gets          map[string]*JobGet //下载任务集合
+	handler       IJobGetterHandler  //回调句柄
+	client        *httpx.HttpClient  //网络调用客户端
 }
 
 //NewJobGetter is exported
-func NewJobGetter(args *CacheArgs, serverConfig *models.ServerConfig, handler IJobGetterHandler) *JobGetter {
+func NewJobGetter(centerAPI string, configs *CacheConfigs, handler IJobGetterHandler) *JobGetter {
 
 	var recovery time.Duration
-	dur, err := time.ParseDuration(args.PullRecovery)
+	dur, err := time.ParseDuration(configs.PullRecovery)
 	if err != nil {
 		logger.WARN("[#cache#] pullrecovery parse duration err, %s, use default 60s.", err.Error())
 		recovery = time.Duration(60) * time.Second
@@ -144,22 +143,16 @@ func NewJobGetter(args *CacheArgs, serverConfig *models.ServerConfig, handler IJ
 		})
 
 	return &JobGetter{
-		exec:         false,
-		Root:         args.SaveDirectory,
-		Recovery:     recovery,
-		serverConfig: serverConfig,
-		quit:         make(chan bool, 1),
-		gets:         make(map[string]*JobGet, 0),
-		handler:      handler,
-		client:       client,
+		exec:          false,
+		Root:          configs.SaveDirectory,
+		Recovery:      recovery,
+		FileServerAPI: configs.FileServerAPI,
+		CenterAPI:     centerAPI,
+		quit:          make(chan bool, 1),
+		gets:          make(map[string]*JobGet, 0),
+		handler:       handler,
+		client:        client,
 	}
-}
-
-//SetServerConfig is exported
-//setting serverConfig
-func (getter *JobGetter) SetServerConfig(serverConfig *models.ServerConfig) {
-
-	getter.serverConfig = serverConfig
 }
 
 //Get is exported
@@ -386,7 +379,7 @@ func (getter *JobGetter) doGet() {
 func (getter *JobGetter) tryGetJobBase(jobdata *models.JobData) (*models.JobBase, *JobGetError) {
 
 	logger.INFO("[#cache#] getter try getjobbase, %s", jobdata.JobId)
-	resp, err := getter.client.Get(context.Background(), getter.serverConfig.CloudDataAPI+"/sys_jobs/"+jobdata.JobId, nil, nil)
+	resp, err := getter.client.Get(context.Background(), getter.CenterAPI+"/cloudtask/v2/jobs/"+jobdata.JobId+"/base", nil, nil)
 	if err != nil {
 		return nil, &JobGetError{Code: ERROR_GETJOBBASE, Error: fmt.Errorf("jobgetter getjobbase http error:%s", err.Error())}
 	}
@@ -394,14 +387,13 @@ func (getter *JobGetter) tryGetJobBase(jobdata *models.JobData) (*models.JobBase
 	defer resp.Close()
 	statuscode := resp.StatusCode()
 	if statuscode != http.StatusOK {
-		return nil, &JobGetError{Code: ERROR_GETJOBBASE, Error: fmt.Errorf("jobgetter getjobbase http status code:%d", statuscode)}
+		return nil, &JobGetError{Code: ERROR_GETJOBBASE, Error: fmt.Errorf("jobgetter getjobbase http code:%d", statuscode)}
 	}
 
-	job := &models.Job{}
-	if err := resp.JSON(job); err != nil {
+	jobbase := &models.JobBase{}
+	if err := resp.JSON(jobbase); err != nil {
 		return nil, &JobGetError{Code: ERROR_GETJOBBASE, Error: fmt.Errorf("jobgetter getjobbase decode data error:%s", err.Error())}
 	}
-	jobbase := parseJobBase(job)
 	jobbase.Version = jobdata.Version
 	return jobbase, nil
 }
@@ -417,9 +409,9 @@ func (getter *JobGetter) tryGetJobFile(jobdirectory string, jobbase *models.JobB
 func (getter *JobGetter) pullJobFile(jobdirectory string, jobbase *models.JobBase) *JobGetError {
 
 	logger.INFO("[#cache#] getter pull jobfile %s", jobbase.FileName)
-	jobroot := getter.Root + "/" + jobbase.JobId                            //job所在根目录
-	jobfile := getter.Root + "/jobs/" + jobbase.FileName                    //job文件下载到本地的路径
-	remoteurl := getter.serverConfig.FileServerAPI + "/" + jobbase.FileName //job文件远程下载路径
+	jobroot := getter.Root + "/" + jobbase.JobId               //job所在根目录
+	jobfile := getter.Root + "/jobs/" + jobbase.FileName       //job文件下载到本地的路径
+	remoteurl := getter.FileServerAPI + "/" + jobbase.FileName //job文件远程下载路径
 	if ret := system.FileExist(jobfile); !ret {
 		if err := getter.client.GetFile(context.Background(), jobfile, remoteurl, nil, nil); err != nil {
 			err = errors.New("getter pull jobfile error " + remoteurl + ", " + err.Error())
@@ -456,38 +448,4 @@ func (getter *JobGetter) makeJobCommandFile(jobdirectory string, jobbase *models
 	}
 	jobbase.Cmd = cmd
 	return nil
-}
-
-func parseJobBase(job *models.Job) *models.JobBase {
-
-	//根据文件名计算filecode(md5)
-	encoder := md5.New()
-	encoder.Write([]byte(job.FileName))
-	fileCode := hex.EncodeToString(encoder.Sum(nil))
-
-	jobbase := &models.JobBase{
-		JobId:         job.JobId,
-		JobName:       job.Name,
-		FileName:      job.FileName,
-		FileCode:      fileCode,
-		Cmd:           job.Cmd,
-		Env:           job.Env,
-		Timeout:       job.Timeout,
-		Version:       0,
-		Schedule:      job.Schedule,
-		NotifySetting: job.NotifySetting,
-	}
-
-	if jobbase.Env == nil {
-		jobbase.Env = []string{}
-	}
-
-	if jobbase.Schedule == nil {
-		jobbase.Schedule = []*models.Schedule{}
-	}
-
-	if jobbase.NotifySetting == nil {
-		jobbase.NotifySetting = &models.NotifySetting{}
-	}
-	return jobbase
 }

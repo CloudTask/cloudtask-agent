@@ -3,13 +3,9 @@ package notify
 import "github.com/cloudtask/libtools/gounits/container"
 import "github.com/cloudtask/libtools/gounits/httpx"
 import "github.com/cloudtask/libtools/gounits/logger"
-import "github.com/cloudtask/common/models"
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"html/template"
 	"net"
 	"net/http"
 	"time"
@@ -17,16 +13,16 @@ import (
 
 //NotifySender is exported
 type NotifySender struct {
-	Runtime      string
-	Key          string
-	IPAddr       string
-	ServerConfig *models.ServerConfig
-	client       *httpx.HttpClient
-	syncQueue    *container.SyncQueue
+	Runtime   string
+	Key       string
+	IPAddr    string
+	CenterAPI string
+	client    *httpx.HttpClient
+	syncQueue *container.SyncQueue
 }
 
 //NewNotifySender is exported
-func NewNotifySender(runtime string, key string, ipaddr string, serverConfig *models.ServerConfig) *NotifySender {
+func NewNotifySender(centerAPI string, runtime string, key string, ipAddr string) *NotifySender {
 
 	client := httpx.NewClient().
 		SetTransport(&http.Transport{
@@ -44,22 +40,15 @@ func NewNotifySender(runtime string, key string, ipaddr string, serverConfig *mo
 		})
 
 	notifySender := &NotifySender{
-		Runtime:      runtime,
-		Key:          key,
-		IPAddr:       ipaddr,
-		ServerConfig: serverConfig,
-		client:       client,
-		syncQueue:    container.NewSyncQueue(),
+		Runtime:   runtime,
+		Key:       key,
+		IPAddr:    ipAddr,
+		CenterAPI: centerAPI,
+		client:    client,
+		syncQueue: container.NewSyncQueue(),
 	}
 	go notifySender.doPopLoop()
 	return notifySender
-}
-
-//SetServerConfig is exported
-//setting serverConfig
-func (sender *NotifySender) SetServerConfig(serverConfig *models.ServerConfig) {
-
-	sender.ServerConfig = serverConfig
 }
 
 func (sender *NotifySender) doPopLoop() {
@@ -70,35 +59,19 @@ func (sender *NotifySender) doPopLoop() {
 			entry := value.(*NotifyEntry)
 			switch entry.NotifyType {
 			case NOTIFY_MESSAGE:
-				go sendMessage(sender.client, sender.ServerConfig, entry.MsgID, entry.Data)
+				go sender.sendMessage(entry.MsgID, entry.Data)
 			case NOTIFY_LOG:
-				go sendLog(sender.client, sender.ServerConfig, entry.MsgID, entry.Data)
+				go sender.sendLog(entry.MsgID, entry.Data)
 			case NOTIFY_MAIL:
-				go sendMail(sender.client, sender.ServerConfig, entry.MsgID, entry.To, entry.Subject, entry.Data)
+				go sender.sendMail(entry.MsgID, entry.To, entry.Subject, entry.Data)
 			}
 		}
 	}
 }
 
-func sendMessage(client *httpx.HttpClient, serverConfig *models.ServerConfig, msgid string, data interface{}) {
+func (sender *NotifySender) sendMessage(msgid string, data interface{}) {
 
-	buf := bytes.NewBuffer([]byte{})
-	if err := json.NewEncoder(buf).Encode(data); err != nil {
-		logger.ERROR("[#notify#] message request %s encode error, %s", msgid, err.Error())
-		return
-	}
-
-	msgArgs := serverConfig.MessageServer
-	msgContent := MessageContent{
-		MessageName: msgArgs.Name,
-		Password:    msgArgs.Password,
-		MessageBody: buf.String(),
-		ContentType: msgArgs.ContentType,
-		CallbackURI: msgArgs.Callback,
-		InvokeType:  msgArgs.Invoke,
-	}
-
-	resp, err := client.PostJSON(context.Background(), msgArgs.APIAddr, nil, msgContent, nil)
+	resp, err := sender.client.PostJSON(context.Background(), sender.CenterAPI+"/messages", nil, data, nil)
 	if err != nil {
 		logger.ERROR("[#notify#] message request %s error, %s", msgid, err.Error())
 		return
@@ -111,9 +84,9 @@ func sendMessage(client *httpx.HttpClient, serverConfig *models.ServerConfig, ms
 	}
 }
 
-func sendLog(client *httpx.HttpClient, serverConfig *models.ServerConfig, msgid string, data interface{}) {
+func (sender *NotifySender) sendLog(msgid string, data interface{}) {
 
-	resp, err := client.PostJSON(context.Background(), serverConfig.CloudDataAPI+"/logs?strict=true", nil, data, nil)
+	resp, err := sender.client.PostJSON(context.Background(), sender.CenterAPI+"/logs", nil, data, nil)
 	if err != nil {
 		logger.ERROR("[#notify#] logs request %s error, %s", msgid, err.Error())
 		return
@@ -126,34 +99,36 @@ func sendLog(client *httpx.HttpClient, serverConfig *models.ServerConfig, msgid 
 	}
 }
 
-func sendMail(client *httpx.HttpClient, serverConfig *models.ServerConfig, msgid string, to string, subject string, data interface{}) {
+func (sender *NotifySender) sendMail(msgid string, to string, subject string, data interface{}) {
 
-	var doc bytes.Buffer
-	p := MailTemplate
-	t := template.New("")
-	t, _ = t.Parse(p)
-	t.Execute(&doc, data)
-	html := doc.String()
+	/*
+		var doc bytes.Buffer
+		p := MailTemplate
+		t := template.New("")
+		t, _ = t.Parse(p)
+		t.Execute(&doc, data)
+		html := doc.String()
 
-	mail := map[string]interface{}{
-		"From":        "cloudtask@newegg.com",
-		"To":          to,
-		"Subject":     subject,
-		"Body":        html,
-		"ContentType": "Html",
-		"MailType":    "Smtp",
-		"SmtpSetting": map[string]interface{}{},
-	}
+		mail := map[string]interface{}{
+			"From":        "cloudtask@newegg.com",
+			"To":          to,
+			"Subject":     subject,
+			"Body":        html,
+			"ContentType": "Html",
+			"MailType":    "Smtp",
+			"SmtpSetting": map[string]interface{}{},
+		}
 
-	resp, err := client.PostJSON(context.Background(), serverConfig.NotifyAPI, nil, mail, nil)
-	if err != nil {
-		logger.ERROR("[#notify#] mail request %s error, %s", msgid, err.Error())
-		return
-	}
+		resp, err := client.PostJSON(context.Background(), "serverConfig.NotifyAPI", nil, mail, nil)
+		if err != nil {
+			logger.ERROR("[#notify#] mail request %s error, %s", msgid, err.Error())
+			return
+		}
 
-	defer resp.Close()
-	statusCode := resp.StatusCode()
-	if statusCode >= http.StatusBadRequest {
-		logger.ERROR("[#notify#] mail request %s failure, %d", msgid, statusCode)
-	}
+		defer resp.Close()
+		statusCode := resp.StatusCode()
+		if statusCode >= http.StatusBadRequest {
+			logger.ERROR("[#notify#] mail request %s failure, %d", msgid, statusCode)
+		}
+	*/
 }

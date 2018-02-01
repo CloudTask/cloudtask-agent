@@ -2,7 +2,6 @@ package api
 
 import "github.com/cloudtask/cloudtask-agent/cache"
 import "github.com/cloudtask/cloudtask-agent/etc"
-import "github.com/cloudtask/common/models"
 import "github.com/cloudtask/libtools/gzkwrapper"
 import "github.com/gorilla/mux"
 
@@ -66,7 +65,6 @@ func ping(c *Context) error {
 		NodeKey      string               `json:"key"`
 		NodeData     *gzkwrapper.NodeData `json:"node"`
 		SystemConfig *etc.Configuration   `json:"systemconfig"`
-		ServerConfig *models.ServerConfig `json:"serverconfig"`
 		Cache        struct {
 			AllocVersion int `json:"allocversion"`
 			JobsTotal    int `json:"jobstotal"`
@@ -76,7 +74,6 @@ func ping(c *Context) error {
 		NodeKey:      c.Get("NodeKey").(string),
 		NodeData:     c.Get("NodeData").(*gzkwrapper.NodeData),
 		SystemConfig: c.Get("SystemConfig").(*etc.Configuration),
-		ServerConfig: c.Get("ServerConfig").(*models.ServerConfig),
 	}
 
 	cache := c.Get("Cache").(*cache.Cache)

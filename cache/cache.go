@@ -2,40 +2,31 @@ package cache
 
 import "github.com/cloudtask/common/models"
 
-//CacheArgs is exported
-type CacheArgs struct {
+//CacheConfigs is exported
+type CacheConfigs struct {
 	MaxJobs       int
 	SaveDirectory string
 	AutoClean     bool
 	CleanInterval string
 	PullRecovery  string
+	FileServerAPI string
 }
 
 //Cache is exported
 type Cache struct {
-	ServerConfig *models.ServerConfig
-	dumpCleaner  *DumpCleaner
-	jobStore     *JobStore
+	dumpCleaner *DumpCleaner
+	jobStore    *JobStore
 }
 
 //NewCache is exported
-func NewCache(args *CacheArgs, serverConfig *models.ServerConfig, handler ICacheHandler) *Cache {
+func NewCache(centerAPI string, configs *CacheConfigs, handler ICacheHandler) *Cache {
 
 	return &Cache{
-		ServerConfig: serverConfig,
-		dumpCleaner:  NewDumpCleaner(args),
-		jobStore: NewJobStore(args, serverConfig,
+		dumpCleaner: NewDumpCleaner(configs),
+		jobStore: NewJobStore(centerAPI, configs,
 			handler.OnJobCacheChangedHandlerFunc,
 			handler.OnJobCacheExceptionHandlerFunc),
 	}
-}
-
-//SetServerConfig is exported
-//setting serverConfig
-func (cache *Cache) SetServerConfig(serverConfig *models.ServerConfig) {
-
-	cache.ServerConfig = serverConfig
-	cache.jobStore.SetServerConfig(serverConfig)
 }
 
 //StartDumpCleaner is exported

@@ -21,20 +21,6 @@ func (server *NodeServer) OnZkWrapperPulseHandlerFunc(key string, nodedata *gzkw
 	}
 }
 
-func (server *NodeServer) OnSeverConfigsWatchHandlerFunc(path string, data []byte, err error) {
-
-	if err != nil {
-		logger.ERROR("[#server#] watch server config error, %s", err)
-		return
-	}
-
-	if err = server.RefreshServerConfig(data); err != nil {
-		logger.ERROR("[#server#] watch server config save error, %s", err)
-		return
-	}
-	logger.INFO("[#server#] watch server config changed.")
-}
-
 func (server *NodeServer) OnCacheAllocWatchHandlerFunc(path string, data []byte, err error) {
 
 	if err != nil {

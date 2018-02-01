@@ -30,16 +30,7 @@ type NotifyEntry struct {
 	Data    interface{}
 }
 
-//MessageContent is exported
-type MessageContent struct {
-	MessageName string `json:"MessageName"` //消息名称
-	Password    string `json:"Password"`    //消息密码
-	MessageBody string `json:"MessageBody"` //消息内容
-	ContentType string `json:"ContentType"` //访问类型
-	CallbackURI string `json:"CallbackUri"` //回调地址
-	InvokeType  string `json:"InvokeType"`  //调用方式
-}
-
+/*
 //Mail is exported
 type Mail struct {
 	From        string   `json:"From"`
@@ -50,3 +41,4 @@ type Mail struct {
 	MailType    string   `json:"MailType"`
 	SMTPSetting struct{} `json:"SmtpSetting"`
 }
+*/
