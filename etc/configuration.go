@@ -99,13 +99,13 @@ func New(file string) error {
 		return fmt.Errorf("config parse env %s", err.Error())
 	}
 
-	centerAPI, err := vaildateURL(conf.CenterAPI)
+	centerAPI, err := validateURL(conf.CenterAPI)
 	if err != nil {
 		return fmt.Errorf("config centerapi invalid, %s", err.Error())
 	}
 	conf.CenterAPI = centerAPI
 
-	fileServerAPI, err := vaildateURL(conf.Cache.FileSrverAPI)
+	fileServerAPI, err := validateURL(conf.Cache.FileSrverAPI)
 	if err != nil {
 		return fmt.Errorf("config fileserverapi invalid, %s", err.Error())
 	}
@@ -214,7 +214,7 @@ func readConfigurationFile(file string) ([]byte, error) {
 	return buf, nil
 }
 
-func vaildateURL(rawURL string) (string, error) {
+func validateURL(rawURL string) (string, error) {
 
 	pURL, err := url.Parse(rawURL)
 	if err != nil {
@@ -225,7 +225,16 @@ func vaildateURL(rawURL string) (string, error) {
 	if scheme == "" {
 		scheme = "http"
 	}
-	return scheme + "://" + pURL.Host + path.Clean(pURL.Path) + "?" + pURL.RawQuery, nil
+
+	rawURL = scheme + "://" + pURL.Host
+	if pURL.Path != "" {
+		rawURL = rawURL + path.Clean(pURL.Path)
+	}
+
+	if pURL.RawQuery != "" {
+		rawURL = rawURL + "?" + pURL.RawQuery
+	}
+	return rawURL, nil
 }
 
 func parseDefaultParmeters(conf *Configuration) {

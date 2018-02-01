@@ -69,7 +69,7 @@ func (sender *NotifySender) doPopLoop() {
 
 func (sender *NotifySender) sendMessage(msgid string, data interface{}) {
 
-	resp, err := sender.client.PostJSON(context.Background(), sender.CenterAPI+"/messages", nil, data, nil)
+	resp, err := sender.client.PostJSON(context.Background(), sender.CenterAPI+"/cloudtask/v2/messages", nil, data, nil)
 	if err != nil {
 		logger.ERROR("[#notify#] message request %s error, %s", msgid, err.Error())
 		return
@@ -84,7 +84,7 @@ func (sender *NotifySender) sendMessage(msgid string, data interface{}) {
 
 func (sender *NotifySender) sendLog(msgid string, data interface{}) {
 
-	resp, err := sender.client.PostJSON(context.Background(), sender.CenterAPI+"/logs", nil, data, nil)
+	resp, err := sender.client.PostJSON(context.Background(), sender.CenterAPI+"/cloudtask/v2/logs", nil, data, nil)
 	if err != nil {
 		logger.ERROR("[#notify#] logs request %s error, %s", msgid, err.Error())
 		return
