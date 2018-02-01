@@ -62,8 +62,6 @@ func (sender *NotifySender) doPopLoop() {
 				go sender.sendMessage(entry.MsgID, entry.Data)
 			case NOTIFY_LOG:
 				go sender.sendLog(entry.MsgID, entry.Data)
-			case NOTIFY_MAIL:
-				go sender.sendMail(entry.MsgID, entry.To, entry.Subject, entry.Data)
 			}
 		}
 	}
@@ -97,38 +95,4 @@ func (sender *NotifySender) sendLog(msgid string, data interface{}) {
 	if statusCode >= http.StatusBadRequest {
 		logger.ERROR("[#notify#] logs request %s failure, %d", msgid, statusCode)
 	}
-}
-
-func (sender *NotifySender) sendMail(msgid string, to string, subject string, data interface{}) {
-
-	/*
-		var doc bytes.Buffer
-		p := MailTemplate
-		t := template.New("")
-		t, _ = t.Parse(p)
-		t.Execute(&doc, data)
-		html := doc.String()
-
-		mail := map[string]interface{}{
-			"From":        "cloudtask@newegg.com",
-			"To":          to,
-			"Subject":     subject,
-			"Body":        html,
-			"ContentType": "Html",
-			"MailType":    "Smtp",
-			"SmtpSetting": map[string]interface{}{},
-		}
-
-		resp, err := client.PostJSON(context.Background(), "serverConfig.NotifyAPI", nil, mail, nil)
-		if err != nil {
-			logger.ERROR("[#notify#] mail request %s error, %s", msgid, err.Error())
-			return
-		}
-
-		defer resp.Close()
-		statusCode := resp.StatusCode()
-		if statusCode >= http.StatusBadRequest {
-			logger.ERROR("[#notify#] mail request %s failure, %d", msgid, statusCode)
-		}
-	*/
 }

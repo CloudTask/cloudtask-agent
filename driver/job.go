@@ -29,41 +29,39 @@ action stop()    -----> job.core != nil -----> job.core -----> stop()
 */
 
 type Job struct {
-	JobId         string                //任务编号
-	Name          string                //任务名称
-	Root          string                //工作根目录
-	FileCode      string                //文件编码
-	WorkDir       string                //工作目录
-	Cmd           string                //执行命令
-	Env           []string              //环境变量
-	Timeout       int                   //执行超时(秒)
-	ExecMaxSec    int64                 //执行最长时长(时间戳：UNIX时间戳)
-	State         JobState              //执行状态
-	NotifySetting *models.NotifySetting //事件处理
-	LastExecAt    time.Time             //最后一次执行时间
-	LastError     error                 //最后一次错误信息
-	cores         map[string]*ExecCore  //每一个schedule对应一个core, cores为调度集合.
-	core          *ExecCore             //当job有schedule时，从调度集合中选择出来的有效core，为当前或即将调度的对象，并可计算nextat.
-	pcore         *ExecCore             //当job无schedule时，发起action可用tempcore执行.
+	JobId      string               //任务编号
+	Name       string               //任务名称
+	Root       string               //工作根目录
+	FileCode   string               //文件编码
+	WorkDir    string               //工作目录
+	Cmd        string               //执行命令
+	Env        []string             //环境变量
+	Timeout    int                  //执行超时(秒)
+	ExecMaxSec int64                //执行最长时长(时间戳：UNIX时间戳)
+	State      JobState             //执行状态
+	LastExecAt time.Time            //最后一次执行时间
+	LastError  error                //最后一次错误信息
+	cores      map[string]*ExecCore //每一个schedule对应一个core, cores为调度集合.
+	core       *ExecCore            //当job有schedule时，从调度集合中选择出来的有效core，为当前或即将调度的对象，并可计算nextat.
+	pcore      *ExecCore            //当job无schedule时，发起action可用tempcore执行.
 }
 
 func NewJob(root string, jobbase *models.JobBase, handler ICoreHandler) *Job {
 
 	job := &Job{
-		JobId:         jobbase.JobId,
-		Name:          jobbase.JobName,
-		Root:          root,
-		FileCode:      jobbase.FileCode,
-		WorkDir:       root + "/" + jobbase.JobId + "/" + jobbase.FileCode,
-		Cmd:           jobbase.Cmd,
-		Env:           jobbase.Env,
-		Timeout:       jobbase.Timeout,
-		ExecMaxSec:    0,
-		State:         JOB_WAITING,
-		NotifySetting: jobbase.NotifySetting,
-		cores:         make(map[string]*ExecCore, 0),
-		core:          nil,
-		pcore:         NewExecCore(jobbase.JobId, nil, handler),
+		JobId:      jobbase.JobId,
+		Name:       jobbase.JobName,
+		Root:       root,
+		FileCode:   jobbase.FileCode,
+		WorkDir:    root + "/" + jobbase.JobId + "/" + jobbase.FileCode,
+		Cmd:        jobbase.Cmd,
+		Env:        jobbase.Env,
+		Timeout:    jobbase.Timeout,
+		ExecMaxSec: 0,
+		State:      JOB_WAITING,
+		cores:      make(map[string]*ExecCore, 0),
+		core:       nil,
+		pcore:      NewExecCore(jobbase.JobId, nil, handler),
 	}
 
 	for _, schedule := range jobbase.Schedule {
@@ -80,7 +78,6 @@ func (job *Job) SetJob(jobbase *models.JobBase, handler ICoreHandler) {
 	job.WorkDir = job.Root + "/" + jobbase.JobId + "/" + jobbase.FileCode
 	job.Cmd = jobbase.Cmd
 	job.Timeout = jobbase.Timeout
-	job.NotifySetting = jobbase.NotifySetting
 	for scheduleid, core := range job.cores {
 		found := false
 		for _, schedule := range jobbase.Schedule {

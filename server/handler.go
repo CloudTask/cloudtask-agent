@@ -64,7 +64,6 @@ func (server *NodeServer) OnDriverExecuteHandlerFunc(state int, context *driver.
 	//当状态为: STATE_STOPED | STATE_FAILED, 记录日志，处理邮件通知.
 	if state != models.STATE_STARTED {
 		server.Notify.SendLog(context.Job.JobId, context.Job.Cmd, context.Job.WorkDir, state, context.StdOut, context.ErrOut, context.ExecErr, context.ExecAt, context.ExecTimes)
-		server.Notify.SendMail(context.Job.JobId, context.Job.Name, context.Job.NotifySetting, context.Job.WorkDir, state, context.StdOut, context.ErrOut, context.ExecErr, context.ExecAt, context.ExecTimes)
 	}
 }
 
