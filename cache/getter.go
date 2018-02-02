@@ -409,9 +409,9 @@ func (getter *JobGetter) tryGetJobFile(jobdirectory string, jobbase *models.JobB
 func (getter *JobGetter) pullJobFile(jobdirectory string, jobbase *models.JobBase) *JobGetError {
 
 	logger.INFO("[#cache#] getter pull jobfile %s", jobbase.FileName)
-	jobroot := getter.Root + "/" + jobbase.JobId               //job所在根目录
-	jobfile := getter.Root + "/jobs/" + jobbase.FileName       //job文件下载到本地的路径
-	remoteurl := getter.FileServerAPI + "/" + jobbase.FileName //job文件远程下载路径
+	jobroot := getter.Root + "/" + jobbase.JobId                                              //job所在根目录
+	jobfile := getter.Root + "/jobs/" + jobbase.FileName                                      //job文件下载到本地的路径
+	remoteurl := getter.FileServerAPI + "/api/file/" + jobbase.JobId + "/" + jobbase.FileName //job文件远程下载路径
 	if ret := system.FileExist(jobfile); !ret {
 		if err := getter.client.GetFile(context.Background(), jobfile, remoteurl, nil, nil); err != nil {
 			err = errors.New("getter pull jobfile error " + remoteurl + ", " + err.Error())

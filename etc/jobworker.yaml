@@ -1,10 +1,10 @@
-version: v.2.5.0
+version: v.2.0.0
 pidfile: ./jobworker.pid
 retrystartup: true
-centerapi: http://127.0.0.1:8985
+centerapi: http://192.168.2.80:8985
 cluster:
     hosts: 192.168.2.80:2181,192.168.2.81:2181,192.168.2.82:2181
-    root: /cloudtask_dev
+    root: /cloudtask
     device:
     runtime: myCluster
     pulse: 8s
@@ -18,7 +18,7 @@ cache:
     autoclean: true
     cleaninterval: 30m
     pullrecovery: 300s
-    filesrverapi: http://127.0.0.1:8009/cloudtask/jobs
+    filesrverapi: http://192.168.2.80:8091
 logger:
     logfile: ./logs/jobworker.log
     loglevel: info
