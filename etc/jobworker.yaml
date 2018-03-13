@@ -1,6 +1,7 @@
 version: v.2.0.0
 pidfile: ./jobworker.pid
 retrystartup: true
+useserverconfig: true
 centerapi: http://192.168.2.80:8985
 cluster:
     hosts: 192.168.2.80:2181,192.168.2.81:2181,192.168.2.82:2181

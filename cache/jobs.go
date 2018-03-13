@@ -14,7 +14,6 @@ import (
 type JobStore struct {
 	sync.RWMutex                                   //互斥锁对象
 	IJobGetterHandler                              //getter回调句柄
-	configs           *CacheConfigs                //配置参数对象
 	alloc             *models.JobsAlloc            //任务分配表
 	getter            *JobGetter                   //任务信息获取器
 	jobs              map[string]*models.JobBase   //任务信息本地缓存
@@ -34,7 +33,6 @@ func NewJobStore(centerAPI string, configs *CacheConfigs,
 	}
 
 	store := &JobStore{
-		configs:           configs,
 		alloc:             alloc,
 		jobs:              make(map[string]*models.JobBase, 0),
 		changedCallback:   changedCallback,
@@ -43,6 +41,13 @@ func NewJobStore(centerAPI string, configs *CacheConfigs,
 
 	store.getter = NewJobGetter(centerAPI, configs, store)
 	return store
+}
+
+//SetServerConfigsParameter is exported
+func (store *JobStore) SetServerConfigsParameter(centerHost string, websiteHost string) {
+
+	store.getter.CenterAPI = centerHost
+	store.getter.FileServerAPI = websiteHost
 }
 
 //GetAllocVersion is exported

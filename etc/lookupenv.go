@@ -26,6 +26,15 @@ func (conf *Configuration) parseEnv() error {
 		conf.RetryStartup = value
 	}
 
+	useServerConfig := os.Getenv("CLOUDTASK_USESERVERCONFIG")
+	if useServerConfig != "" {
+		value, err := strconv.ParseBool(useServerConfig)
+		if err != nil {
+			return fmt.Errorf("CLOUDTASK_USESERVERCONFIG invalid, %s", err.Error())
+		}
+		conf.UseServerConfig = value
+	}
+
 	centerAPI := os.Getenv("CLOUDTASK_CENTERAPI")
 	if centerAPI != "" {
 		conf.CenterAPI = centerAPI

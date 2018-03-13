@@ -29,6 +29,12 @@ func NewCache(centerAPI string, configs *CacheConfigs, handler ICacheHandler) *C
 	}
 }
 
+//SetServerConfigsParameter is exported
+func (cache *Cache) SetServerConfigsParameter(centerHost string, websiteHost string) {
+
+	cache.jobStore.SetServerConfigsParameter(centerHost, websiteHost)
+}
+
 //StartDumpCleaner is exported
 func (cache *Cache) StartDumpCleaner() {
 

@@ -21,15 +21,16 @@ const (
 
 //NodeServer is exported
 type NodeServer struct {
-	Key       string
-	Runtime   string
-	AllocPath string
-	Data      *gzkwrapper.NodeData
-	Worker    *gzkwrapper.Worker
-	Cache     *cache.Cache
-	Driver    *driver.Driver
-	Notify    *notify.NotifySender
-	stopCh    chan struct{}
+	Key        string
+	Runtime    string
+	ConfigPath string
+	AllocPath  string
+	Data       *gzkwrapper.NodeData
+	Worker     *gzkwrapper.Worker
+	Cache      *cache.Cache
+	Driver     *driver.Driver
+	Notify     *notify.NotifySender
+	stopCh     chan struct{}
 	gzkwrapper.INodeNotifyHandler
 	cache.ICacheHandler
 	driver.IDriverHandler
@@ -40,10 +41,11 @@ func NewNodeServer(key string) (*NodeServer, error) {
 
 	clusterConfigs := etc.ClusterConfigs()
 	server := &NodeServer{
-		Key:       key,
-		Runtime:   clusterConfigs.Location,
-		AllocPath: clusterConfigs.Root + "/JOBS-" + clusterConfigs.Location,
-		stopCh:    make(chan struct{}),
+		Key:        key,
+		Runtime:    clusterConfigs.Location,
+		ConfigPath: clusterConfigs.Root + "/ServerConfig",
+		AllocPath:  clusterConfigs.Root + "/JOBS-" + clusterConfigs.Location,
+		stopCh:     make(chan struct{}),
 	}
 
 	worker, err := gzkwrapper.NewWorker(key, clusterConfigs, server)
@@ -81,6 +83,10 @@ func (server *NodeServer) Startup() error {
 		return err
 	}
 
+	if etc.UseServerConfig() {
+		server.initServerConfig()
+	}
+
 	if err = server.openCache(); err != nil {
 		logger.ERROR("[#server#] server open cache error, %s", err)
 		return err
@@ -92,6 +98,7 @@ func (server *NodeServer) Startup() error {
 func (server *NodeServer) Stop() error {
 
 	close(server.stopCh)
+	server.closeServerConfig()
 	server.Driver.Clear()
 	server.closeCache()
 	if err := server.nodeUnRegister(); err != nil {
@@ -121,6 +128,48 @@ func (server *NodeServer) nodeUnRegister() error {
 		return err
 	}
 	return server.Worker.Close()
+}
+
+//initServerConfig is exported
+//initialize server congfig and watching zk config node path.
+func (server *NodeServer) initServerConfig() {
+
+	//watch server config path.
+	err := server.Worker.WatchOpen(server.ConfigPath, server.OnSeverConfigsWatchHandlerFunc)
+	if err != nil {
+		logger.WARN("[#server] init serverConfig error %s, used local configs.", err)
+		return
+	}
+
+	//read config data.
+	data, err := server.Worker.Get(server.ConfigPath)
+	if err != nil {
+		logger.WARN("[#server] get serverConfig error %s, used local configs.", err)
+		return
+	}
+	//save data to etc serverConfig.
+	server.RefreshServerConfig(data)
+	logger.INFO("[#server#] inited server config.")
+}
+
+//closeServerConfig is exported
+func (server *NodeServer) closeServerConfig() {
+
+	server.Worker.WatchClose(server.ConfigPath)
+}
+
+//RefreshServerConfig is exported
+//save serverConfig, re-set to references objects.
+func (server *NodeServer) RefreshServerConfig(data []byte) error {
+
+	if etc.UseServerConfig() {
+		if err := etc.SaveServerConfig(data); err != nil {
+			return err
+		}
+		server.Cache.SetServerConfigsParameter(etc.SystemConfig.CenterAPI, etc.SystemConfig.Cache.FileSrverAPI)
+		server.Notify.CenterAPI = etc.SystemConfig.CenterAPI
+	}
+	return nil
 }
 
 //openCache is exported

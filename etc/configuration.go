@@ -1,5 +1,6 @@
 package etc
 
+import "github.com/cloudtask/common/models"
 import "github.com/cloudtask/cloudtask-agent/cache"
 import "github.com/cloudtask/libtools/gounits/logger"
 import "github.com/cloudtask/libtools/gounits/system"
@@ -31,10 +32,11 @@ var (
 
 // Configuration is exported
 type Configuration struct {
-	Version      string `yaml:"version" json:"version"`
-	PidFile      string `yaml:"pidfile" json:"pidfile"`
-	RetryStartup bool   `yaml:"retrystartup" json:"retrystartup"`
-	CenterAPI    string `yaml:"centerapi" json:"centerapi"`
+	Version         string `yaml:"version" json:"version"`
+	PidFile         string `yaml:"pidfile" json:"pidfile"`
+	RetryStartup    bool   `yaml:"retrystartup" json:"retrystartup"`
+	UseServerConfig bool   `yaml:"useserverconfig" json:"useserverconfig"`
+	CenterAPI       string `yaml:"centerapi" json:"centerapi"`
 
 	Cluster struct {
 		Hosts     string `yaml:"hosts" json:"hosts"`
@@ -90,7 +92,10 @@ func New(file string) error {
 		return fmt.Errorf("config read %s", err.Error())
 	}
 
-	conf := &Configuration{RetryStartup: true}
+	conf := &Configuration{
+		RetryStartup:    true,
+		UseServerConfig: true,
+	}
 	if err := yaml.Unmarshal(buf, conf); err != nil {
 		return ErrConfigFormatInvalid
 	}
@@ -116,11 +121,26 @@ func New(file string) error {
 	log.Printf("[#etc#] version: %s\n", SystemConfig.Version)
 	log.Printf("[#etc#] pidfile: %s\n", SystemConfig.PidFile)
 	log.Printf("[#etc#] retrystartup: %s\n", strconv.FormatBool(SystemConfig.RetryStartup))
+	log.Printf("[#etc#] useserverconfig: %s\n", strconv.FormatBool(SystemConfig.UseServerConfig))
 	log.Printf("[#etc#] centerapi: %s\n", SystemConfig.CenterAPI)
 	log.Printf("[#etc#] cluster: %+v\n", SystemConfig.Cluster)
 	log.Printf("[#etc#] APIlisten: %+v\n", SystemConfig.API)
 	log.Printf("[#etc#] cache: %+v\n", SystemConfig.Cache)
 	log.Printf("[#etc#] logger: %+v\n", SystemConfig.Logger)
+	return nil
+}
+
+//SaveServerConfig is exported
+func SaveServerConfig(data []byte) error {
+
+	if SystemConfig != nil {
+		value, err := models.ParseServerConfigs(data)
+		if err != nil {
+			return err
+		}
+		SystemConfig.CenterAPI = value.CenterHost
+		SystemConfig.Cache.FileSrverAPI = value.WebSiteHost
+	}
 	return nil
 }
 
@@ -138,6 +158,15 @@ func RetryStartup() bool {
 
 	if SystemConfig != nil {
 		return SystemConfig.RetryStartup
+	}
+	return false
+}
+
+//UseServerConfig is exported
+func UseServerConfig() bool {
+
+	if SystemConfig != nil {
+		return SystemConfig.UseServerConfig
 	}
 	return false
 }
