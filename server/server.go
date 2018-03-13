@@ -56,9 +56,9 @@ func NewNodeServer(key string) (*NodeServer, error) {
 	server.Worker = worker
 	server.Data = worker.Data
 	cacheConfigs := etc.CacheConfigs()
-	server.Cache = cache.NewCache(etc.CenterAPI(), cacheConfigs, server)
+	server.Cache = cache.NewCache(cacheConfigs, server)
 	server.Driver = driver.NewDirver(cacheConfigs.SaveDirectory, server)
-	server.Notify = notify.NewNotifySender(etc.CenterAPI(), clusterConfigs.Location, key, worker.Data.IpAddr)
+	server.Notify = notify.NewNotifySender(etc.CenterHost(), clusterConfigs.Location, key, worker.Data.IpAddr)
 	return server, nil
 }
 
@@ -166,8 +166,8 @@ func (server *NodeServer) RefreshServerConfig(data []byte) error {
 		if err := etc.SaveServerConfig(data); err != nil {
 			return err
 		}
-		server.Cache.SetServerConfigsParameter(etc.SystemConfig.CenterAPI, etc.SystemConfig.Cache.FileSrverAPI)
-		server.Notify.CenterAPI = etc.SystemConfig.CenterAPI
+		server.Cache.SetServerConfigsParameter(etc.SystemConfig.CenterHost, etc.SystemConfig.WebsiteHost)
+		server.Notify.CenterHost = etc.SystemConfig.CenterHost
 	}
 	return nil
 }

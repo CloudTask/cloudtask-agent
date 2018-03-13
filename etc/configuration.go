@@ -20,14 +20,19 @@ import (
 )
 
 var (
-	SystemConfig *Configuration = nil
+	//SystemConfig is exported, global config object.
+	SystemConfig *Configuration
 )
 
 var (
-	ErrConfigFileNotFound      = errors.New("config file not found.")
-	ErrConfigGenerateFailure   = errors.New("config file generated failure.")
-	ErrConfigFormatInvalid     = errors.New("config file format invalid.")
-	ErrConfigServerDataInvalid = errors.New("config server data invalid.")
+	//ErrConfigFileNotFound is exported
+	ErrConfigFileNotFound = errors.New("config file not found")
+	//ErrConfigGenerateFailure is exported
+	ErrConfigGenerateFailure = errors.New("config file generated failure")
+	//ErrConfigFormatInvalid is exported
+	ErrConfigFormatInvalid = errors.New("config file format invalid")
+	//ErrConfigServerDataInvalid is exported
+	ErrConfigServerDataInvalid = errors.New("config server data invalid")
 )
 
 // Configuration is exported
@@ -36,7 +41,8 @@ type Configuration struct {
 	PidFile         string `yaml:"pidfile" json:"pidfile"`
 	RetryStartup    bool   `yaml:"retrystartup" json:"retrystartup"`
 	UseServerConfig bool   `yaml:"useserverconfig" json:"useserverconfig"`
-	CenterAPI       string `yaml:"centerapi" json:"centerapi"`
+	CenterHost      string `yaml:"centerhost" json:"centerhost"`
+	WebsiteHost     string `yaml:"websitehost" json:"websitehost"`
 
 	Cluster struct {
 		Hosts     string `yaml:"hosts" json:"hosts"`
@@ -60,7 +66,6 @@ type Configuration struct {
 		AutoClean     bool   `yaml:"autoclean" json:"autoclean"`
 		CleanInterval string `yaml:"cleaninterval" json:"cleaninterval"`
 		PullRecovery  string `yaml:"pullrecovery" json:"pullrecovery"`
-		FileSrverAPI  string `yaml:"filesrverapi" json:"filesrverapi"`
 	} `yaml:"cache" json:"cache"`
 
 	Logger struct {
@@ -104,17 +109,17 @@ func New(file string) error {
 		return fmt.Errorf("config parse env %s", err.Error())
 	}
 
-	centerAPI, err := validateURL(conf.CenterAPI)
+	centerHost, err := validateURL(conf.CenterHost)
 	if err != nil {
-		return fmt.Errorf("config centerapi invalid, %s", err.Error())
+		return fmt.Errorf("config centerhost invalid, %s", err.Error())
 	}
-	conf.CenterAPI = centerAPI
+	conf.CenterHost = centerHost
 
-	fileServerAPI, err := validateURL(conf.Cache.FileSrverAPI)
+	websiteHost, err := validateURL(conf.WebsiteHost)
 	if err != nil {
-		return fmt.Errorf("config fileserverapi invalid, %s", err.Error())
+		return fmt.Errorf("config websitehost invalid, %s", err.Error())
 	}
-	conf.Cache.FileSrverAPI = fileServerAPI
+	conf.WebsiteHost = websiteHost
 
 	parseDefaultParmeters(conf)
 	SystemConfig = conf
@@ -122,7 +127,8 @@ func New(file string) error {
 	log.Printf("[#etc#] pidfile: %s\n", SystemConfig.PidFile)
 	log.Printf("[#etc#] retrystartup: %s\n", strconv.FormatBool(SystemConfig.RetryStartup))
 	log.Printf("[#etc#] useserverconfig: %s\n", strconv.FormatBool(SystemConfig.UseServerConfig))
-	log.Printf("[#etc#] centerapi: %s\n", SystemConfig.CenterAPI)
+	log.Printf("[#etc#] centerhost: %s\n", SystemConfig.CenterHost)
+	log.Printf("[#etc#] websitehost: %s\n", SystemConfig.WebsiteHost)
 	log.Printf("[#etc#] cluster: %+v\n", SystemConfig.Cluster)
 	log.Printf("[#etc#] APIlisten: %+v\n", SystemConfig.API)
 	log.Printf("[#etc#] cache: %+v\n", SystemConfig.Cache)
@@ -138,8 +144,8 @@ func SaveServerConfig(data []byte) error {
 		if err != nil {
 			return err
 		}
-		SystemConfig.CenterAPI = value.CenterHost
-		SystemConfig.Cache.FileSrverAPI = value.WebSiteHost
+		SystemConfig.CenterHost = value.CenterHost
+		SystemConfig.WebsiteHost = value.WebSiteHost
 	}
 	return nil
 }
@@ -171,11 +177,20 @@ func UseServerConfig() bool {
 	return false
 }
 
-//CenterAPI is exported
-func CenterAPI() string {
+//CenterHost is exported
+func CenterHost() string {
 
 	if SystemConfig != nil {
-		return SystemConfig.CenterAPI
+		return SystemConfig.CenterHost
+	}
+	return ""
+}
+
+//WebSiteHost is exported
+func WebSiteHost() string {
+
+	if SystemConfig != nil {
+		return SystemConfig.WebsiteHost
 	}
 	return ""
 }
@@ -204,12 +219,13 @@ func CacheConfigs() *cache.CacheConfigs {
 
 	if SystemConfig != nil {
 		return &cache.CacheConfigs{
+			CenterHost:    SystemConfig.CenterHost,
+			WebsiteHost:   SystemConfig.WebsiteHost,
 			MaxJobs:       SystemConfig.Cache.MaxJobs,
 			SaveDirectory: SystemConfig.Cache.SaveDirectory,
 			AutoClean:     SystemConfig.Cache.AutoClean,
 			CleanInterval: SystemConfig.Cache.CleanInterval,
 			PullRecovery:  SystemConfig.Cache.PullRecovery,
-			FileServerAPI: SystemConfig.Cache.FileSrverAPI,
 		}
 	}
 	return nil

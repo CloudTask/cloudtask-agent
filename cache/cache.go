@@ -4,12 +4,13 @@ import "github.com/cloudtask/common/models"
 
 //CacheConfigs is exported
 type CacheConfigs struct {
+	CenterHost    string
+	WebsiteHost   string
 	MaxJobs       int
 	SaveDirectory string
 	AutoClean     bool
 	CleanInterval string
 	PullRecovery  string
-	FileServerAPI string
 }
 
 //Cache is exported
@@ -19,11 +20,11 @@ type Cache struct {
 }
 
 //NewCache is exported
-func NewCache(centerAPI string, configs *CacheConfigs, handler ICacheHandler) *Cache {
+func NewCache(configs *CacheConfigs, handler ICacheHandler) *Cache {
 
 	return &Cache{
 		dumpCleaner: NewDumpCleaner(configs),
-		jobStore: NewJobStore(centerAPI, configs,
+		jobStore: NewJobStore(configs,
 			handler.OnJobCacheChangedHandlerFunc,
 			handler.OnJobCacheExceptionHandlerFunc),
 	}

@@ -13,16 +13,16 @@ import (
 
 //NotifySender is exported
 type NotifySender struct {
-	Runtime   string
-	Key       string
-	IPAddr    string
-	CenterAPI string
-	client    *httpx.HttpClient
-	syncQueue *container.SyncQueue
+	Runtime    string
+	Key        string
+	IPAddr     string
+	CenterHost string
+	client     *httpx.HttpClient
+	syncQueue  *container.SyncQueue
 }
 
 //NewNotifySender is exported
-func NewNotifySender(centerAPI string, runtime string, key string, ipAddr string) *NotifySender {
+func NewNotifySender(centerHost string, runtime string, key string, ipAddr string) *NotifySender {
 
 	client := httpx.NewClient().
 		SetTransport(&http.Transport{
@@ -40,12 +40,12 @@ func NewNotifySender(centerAPI string, runtime string, key string, ipAddr string
 		})
 
 	notifySender := &NotifySender{
-		Runtime:   runtime,
-		Key:       key,
-		IPAddr:    ipAddr,
-		CenterAPI: centerAPI,
-		client:    client,
-		syncQueue: container.NewSyncQueue(),
+		Runtime:    runtime,
+		Key:        key,
+		IPAddr:     ipAddr,
+		CenterHost: centerHost,
+		client:     client,
+		syncQueue:  container.NewSyncQueue(),
 	}
 	go notifySender.doPopLoop()
 	return notifySender
@@ -69,7 +69,7 @@ func (sender *NotifySender) doPopLoop() {
 
 func (sender *NotifySender) sendMessage(msgid string, data interface{}) {
 
-	resp, err := sender.client.PostJSON(context.Background(), sender.CenterAPI+"/cloudtask/v2/messages", nil, data, nil)
+	resp, err := sender.client.PostJSON(context.Background(), sender.CenterHost+"/cloudtask/v2/messages", nil, data, nil)
 	if err != nil {
 		logger.ERROR("[#notify#] message request %s error, %s", msgid, err.Error())
 		return
@@ -84,7 +84,7 @@ func (sender *NotifySender) sendMessage(msgid string, data interface{}) {
 
 func (sender *NotifySender) sendLog(msgid string, data interface{}) {
 
-	resp, err := sender.client.PostJSON(context.Background(), sender.CenterAPI+"/cloudtask/v2/logs", nil, data, nil)
+	resp, err := sender.client.PostJSON(context.Background(), sender.CenterHost+"/cloudtask/v2/logs", nil, data, nil)
 	if err != nil {
 		logger.ERROR("[#notify#] logs request %s error, %s", msgid, err.Error())
 		return

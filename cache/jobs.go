@@ -23,7 +23,7 @@ type JobStore struct {
 
 //NewJobStore is exported
 //jobs & alloc cache
-func NewJobStore(centerAPI string, configs *CacheConfigs,
+func NewJobStore(configs *CacheConfigs,
 	changedCallback JobCacheChangedHandlerFunc,
 	exceptionCallback JobCacheExceptionHandlerFunc) *JobStore {
 
@@ -39,15 +39,15 @@ func NewJobStore(centerAPI string, configs *CacheConfigs,
 		exceptionCallback: exceptionCallback,
 	}
 
-	store.getter = NewJobGetter(centerAPI, configs, store)
+	store.getter = NewJobGetter(configs, store)
 	return store
 }
 
 //SetServerConfigsParameter is exported
 func (store *JobStore) SetServerConfigsParameter(centerHost string, websiteHost string) {
 
-	store.getter.CenterAPI = centerHost
-	store.getter.FileServerAPI = websiteHost
+	store.getter.CenterHost = centerHost
+	store.getter.WebsiteHost = websiteHost
 }
 
 //GetAllocVersion is exported
