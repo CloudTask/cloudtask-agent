@@ -38,7 +38,7 @@ func init() {
 func NewJobWorker() (*JobWorker, error) {
 
 	var filePath string
-	flag.StringVar(&filePath, "f", "./etc/jobworker.yaml", "jobworker etc file.")
+	flag.StringVar(&filePath, "f", "./etc/config.yaml", "jobworker etc file.")
 	flag.Parse()
 	if err := etc.New(filePath); err != nil {
 		return nil, err
