@@ -2,8 +2,8 @@
 The cloudtask platform task work node.
 
 
-Join to the cloudtask runtime cluster, according to the runtime task distribution table information, 
-responsibled for the final execution of the task.
+Join to the cloudtask runtime cluster, according to the runtime tasks distribution table information, 
+responsibled for the final execution of the tasks.
 
 ### Documents 
 * [APIs Manual](./APIs.md)
