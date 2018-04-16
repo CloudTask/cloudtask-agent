@@ -18,7 +18,7 @@ func createCommandFile(directory string, cmd string) (string, error) {
 		}
 	}
 
-	body := fmt.Sprintf("@echo off\r\n\r\n%s\r\n", cmd)
+	body := fmt.Sprintf("@echo off\r\ncd /d %s\r\n%s", `%~dp0`, cmd)
 	if err := ioutil.WriteFile(fpath, []byte(body), 0777); err != nil {
 		return "", err
 	}

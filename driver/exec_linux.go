@@ -73,7 +73,7 @@ func (driver *ExecDriver) Stop() error {
 			return fmt.Errorf("stop job getProcess invalid.")
 		}
 		sendCtrlBreak(proc)                //发送退出消息
-		afc := time.After(time.Second * 1) //最多等待1s让任务进程退出
+		afc := time.After(time.Second * 5) //最多等待5s让任务进程退出
 		done := false
 	NEW_TICK_DURATION:
 		ticker := time.NewTicker(time.Millisecond * 100)

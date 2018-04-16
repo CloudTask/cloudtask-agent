@@ -6,14 +6,21 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 	"time"
 )
 
 func NewExecDriver(name string, cmd string, env []string) (*ExecDriver, error) {
 
+	filePath, err := filepath.Abs(name + "/" + cmd)
+	if err != nil {
+		logger.ERROR("[#driver#] execdriver cmd file path error:%s", err)
+		return nil, err
+	}
+
 	driver := &ExecDriver{Running: false, ExecTimes: ZERO_TICK}
-	driver.Command = exec.Command("cmd", "/C", "cd "+name+" && "+cmd)
+	driver.Command = exec.Command("cmd", "/C", filePath)
 	if err := driver.SetCommandPipe(); err != nil {
 		logger.ERROR("[#driver#] execdriver setcommandpipe error:%s", err)
 		return nil, err
@@ -69,7 +76,7 @@ func (driver *ExecDriver) Stop() error {
 	logger.INFO("[#driver#] execdriver stop")
 	if driver.Command != nil && driver.Command.Process != nil {
 		sendCtrlBreak(driver.Command.Process.Pid) //发送退出消息
-		afc := time.After(time.Second * 1)        //最多等待1s让任务进程退出
+		afc := time.After(time.Second * 5)        //最多等待5s让任务进程退出
 		done := false
 	NEW_TICK_DURATION:
 		ticker := time.NewTicker(time.Millisecond * 100)
@@ -83,7 +90,8 @@ func (driver *ExecDriver) Stop() error {
 				goto NEW_TICK_DURATION
 			case <-afc:
 				ticker.Stop()
-				if err := driver.Command.Process.Signal(os.Kill); err != nil {
+				err := exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprint(driver.Command.Process.Pid)).Run()
+				if err != nil {
 					logger.ERROR("[#driver#] execdriver kill:%s", err)
 					return err
 				}

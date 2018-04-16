@@ -401,9 +401,24 @@ func (getter *JobGetter) tryGetJobBase(jobdata *models.JobData) (*models.JobBase
 func (getter *JobGetter) tryGetJobFile(jobdirectory string, jobbase *models.JobBase) *JobGetError {
 
 	if strings.TrimSpace(jobbase.FileName) != "" {
-		return getter.pullJobFile(jobdirectory, jobbase)
+		jobGetError := getter.pullJobFile(jobdirectory, jobbase)
+		if jobGetError != nil {
+			return jobGetError
+		}
 	}
-	return getter.makeJobCommandFile(jobdirectory, jobbase)
+
+	if ret, _ := system.PathExists(jobdirectory); !ret {
+		if err := system.MakeDirectory(jobdirectory); err != nil {
+			return &JobGetError{Code: ERROR_MAKECMDFILE, Error: err}
+		}
+	}
+
+	cmd, err := createCommandFile(jobdirectory, jobbase.Cmd)
+	if err != nil {
+		return &JobGetError{Code: ERROR_MAKECMDFILE, Error: err}
+	}
+	jobbase.Cmd = cmd
+	return nil
 }
 
 func (getter *JobGetter) pullJobFile(jobdirectory string, jobbase *models.JobBase) *JobGetError {
@@ -431,21 +446,5 @@ func (getter *JobGetter) pullJobFile(jobdirectory string, jobbase *models.JobBas
 		system.DirectoryCopy(tempdir, jobdirectory)
 		os.RemoveAll(tempdir)
 	}
-	return nil
-}
-
-func (getter *JobGetter) makeJobCommandFile(jobdirectory string, jobbase *models.JobBase) *JobGetError {
-
-	if ret, _ := system.PathExists(jobdirectory); !ret {
-		if err := system.MakeDirectory(jobdirectory); err != nil {
-			return &JobGetError{Code: ERROR_MAKECMDFILE, Error: err}
-		}
-	}
-
-	cmd, err := createCommandFile(jobdirectory, jobbase.Cmd)
-	if err != nil {
-		return &JobGetError{Code: ERROR_MAKECMDFILE, Error: err}
-	}
-	jobbase.Cmd = cmd
 	return nil
 }
