@@ -1,4 +1,4 @@
-version: v.2.0.0
+version: v.2.3.4
 pidfile: ./jobworker.pid
 retrystartup: true
 useserverconfig: true
@@ -22,6 +22,6 @@ cache:
     pullrecovery: 300s
 logger:
     logfile: ./logs/jobworker.log
-    loglevel: info
+    loglevel: error
     logsize: 20971520
 ...
